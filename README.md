@@ -33,7 +33,7 @@
 
 ## 📐 Architecture Overview
 
-LocLM implements a modular **V6 Multi-Agent Architecture with Multi-Repo AST Refactoring & Regression Testing** backed by intelligent hardware profiling and sandboxed local execution tools.
+LocLM implements a modular **V7 Multi-Agent Architecture with Plugin System, Session Memory, Parallel Execution & Output Evaluation** backed by intelligent hardware profiling and sandboxed local execution tools.
 
 <p align="center">
   <img src="assets/loclm_architecture_visual.jpg" alt="LocLM Architecture Diagram" width="100%" />
@@ -71,23 +71,26 @@ flowchart TD
         MemoryManager <--> SQLiteStore
     end
 
-    subgraph AgentLayer["V5 Multi-Agent System & Verification Core"]
-        V5Orchestrator["V5 Orchestrator Engine"]
+    subgraph AgentLayer["V7 Multi-Agent System & Evaluation Core"]
+        V7Orchestrator["V7 Orchestrator Engine"]
         Router["Router Agent<br/>(Intent Classification)"]
         Planner["Planner Agent<br/>(Task Decomposition)"]
+        ParallelExec["Parallel Step Executor<br/>(asyncio.gather)"]
         SelfCorrection["Self-Correction & Reflection Loop"]
+        Evaluator["EvaluatorAgent<br/>(Quality Scoring + Retry)"]
         
         subgraph Agents["Specialized Agents"]
             CodingAgent["Coding Agent"]
             TerminalAgent["Terminal Agent"]
             KnowledgeAgent["Knowledge Agent"]
             GeneralAgent["General Agent"]
+            PluginAgents["Plugin Agents<br/>(Runtime-loaded)"]
         end
         
-        V5Orchestrator --> MemoryManager
-        V5Orchestrator --> Router --> Planner
-        Planner --> Agents
-        Agents --> SelfCorrection
+        V7Orchestrator --> MemoryManager
+        V7Orchestrator --> Router --> Planner
+        Planner --> ParallelExec --> Agents
+        Agents --> SelfCorrection --> Evaluator
     end
 
     subgraph ToolLayer["Sandboxed Local Tool Execution"]
@@ -100,12 +103,14 @@ flowchart TD
         ToolRegistry --> FSTools & TermTools & PyTools & GitTools
     end
 
-    CLI --> V5Orchestrator
+    CLI --> V7Orchestrator
     CLI --> Detector
     TierSelector --> ModelManager
     Agents --> ToolRegistry
     ToolRegistry --> SecurityGuard["Security Policy Guard"]
     SecurityGuard --> CLI
+    PluginRegistry["Plugin Registry<br/>(~/.loclm/plugins/)"] --> V7Orchestrator
+    SessionMemory["Session Memory<br/>(SQLite Thread Store)"] --> V7Orchestrator
 ```
 
 ---
@@ -127,16 +132,20 @@ LocLM automatically benchmarks your hardware environment on launch:
 - **SQLite Memory Store**: Offline, zero-dependency storage for project knowledge, codebase rules, user facts, and task history.
 - **Context Retrieval (RAG)**: Automatically injects relevant past memory snippets into agent context prompts.
 
-### 4. 🤖 V5 Multi-Agent System & Self-Correction (`loclm.agents`)
-- **V5 Orchestrator Engine**: Coordinates context retrieval, routing, task planning, execution, and persistent memory logging.
+### 4. 🤖 V7 Multi-Agent System & Output Evaluation (`loclm.agents`)
+- **V7 Orchestrator Engine**: Coordinates context retrieval, routing, task planning, parallel execution, evaluation, and persistent memory logging.
 - **Router Agent**: Parses incoming prompt intent and dispatches tasks to dedicated specialized agents.
 - **Planner Agent**: Breaks complex, multi-step queries into structured execution paths.
+- **Parallel Step Executor**: Runs independent plan steps concurrently via `asyncio.gather` for dramatically faster multi-faceted task completion.
 - **Self-Correction & Verification Loop**: Automatically reflects on tool execution errors and re-evaluates inputs to resolve failures before returning responses.
+- **EvaluatorAgent (V7)**: After every primary agent response, scores output on **correctness, completeness, safety, and relevance** (0.0–1.0 each). If the weighted quality score falls below threshold, a single automatic retry is triggered with a structured improvement hint injected.
 - **Specialized Agents**:
   - `CodingAgent`: Handles code analysis, refactoring, patch creation, and syntax validation.
   - `TerminalAgent`: Interprets natural language requests into shell operations with built-in safety boundaries.
   - `KnowledgeAgent`: Synthesizes project structure, documentation, and localized knowledge items.
   - `GeneralAgent`: Handles general dialogue, reasoning, and standard assistant interactions.
+  - `RefactorAgent` *(V6)*: AST-guided safe symbol renaming and zero-regression refactoring.
+  - `ProjectAgent` *(V6)*: Full project scaffolding and file generation from natural language.
 
 ### 5. 🛠️ Sandboxed Tool System (`loclm.tools`)
 - **Filesystem**: Safe file reading, modification, tree traversal, and diff generation within workspace boundaries.
@@ -229,14 +238,26 @@ LocLM/
 ├── config/                       # Configuration schemas & default profiles
 ├── loclm/                        # Core LocLM Python Package
 │   ├── agents/                   # Router, Planner, Loop Runner, Specialized Agents
+│   │   ├── evaluator_agent.py    # V7: Quality scoring & retry orchestration
+│   │   ├── v7_orchestrator.py    # V7: Plugin + Session + Parallel + Eval pipeline
+│   │   └── v5_orchestrator.py   # V5: Self-correction orchestrator
 │   ├── cli/                      # Rich/Typer Terminal Interface
 │   ├── core/                     # Orchestrator & State Management
 │   ├── hardware/                 # CPU/GPU Detector & Tier Profiler
+│   ├── memory/                   # Offline Memory
+│   │   └── session.py            # V7: Session-persistent conversation thread
 │   ├── models/                   # Ollama Manager & Model Selector
+│   ├── plugins/                  # V7: Runtime Plugin Discovery & Registry
+│   │   ├── loader.py             # *_plugin.py file scanner & importer
+│   │   └── registry.py          # Tool/agent hot-registration from plugins
+│   ├── repo/                     # V6: Multi-repo AST index & symbol search
 │   ├── security/                 # Isolation & Network Security Guards
+│   ├── testing/                  # V6: Regression test runner
 │   └── tools/                    # Sandboxed Tools (FS, Terminal, Python, Git)
 ├── tests/                        # Comprehensive Pytest Suite
-├── pyproject.toml                # Project Build Configuration
+│   ├── test_v7_pipeline.py       # V7: Plugin, Session, Eval, Parallel tests
+│   └── test_v6_refactoring.py   # V6: AST refactoring & multi-repo tests
+├── pyproject.toml                # Project Build Configuration (v7.0.0)
 └── README.md                     # Documentation
 ```
 
