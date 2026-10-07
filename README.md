@@ -33,7 +33,7 @@
 
 ## 📐 Architecture Overview
 
-LocLM implements a modular **V4 Multi-Agent Architecture** backed by intelligent hardware profiling and sandboxed local execution tools.
+LocLM implements a modular **V6 Multi-Agent Architecture with Multi-Repo AST Refactoring & Regression Testing** backed by intelligent hardware profiling and sandboxed local execution tools.
 
 <p align="center">
   <img src="assets/loclm_architecture_visual.jpg" alt="LocLM Architecture Diagram" width="100%" />
@@ -55,19 +55,27 @@ flowchart TD
         Detector --> Profiler --> TierSelector
     end
 
-    subgraph ModelLayer["Model Management Layer (Ollama Engine)"]
+    subgraph ModelLayer["Model Management & Cascade Layer"]
         ModelManager["Model Manager"]
+        CascadeManager["Model Cascade & Fallback Manager"]
         OllamaClient["Ollama Local Client"]
-        QuantSelector["Quantization & Fallback Logic"]
         
         ModelManager <--> OllamaClient
-        ModelManager --> QuantSelector
+        CascadeManager --> ModelManager
     end
 
-    subgraph AgentLayer["V4 Multi-Agent Orchestration Core"]
+    subgraph MemoryLayer["V5 Local Memory & RAG Engine"]
+        SQLiteStore["SQLite Memory Store<br/>(Offline Vectors & Facts)"]
+        MemoryManager["Memory Context Manager"]
+        
+        MemoryManager <--> SQLiteStore
+    end
+
+    subgraph AgentLayer["V5 Multi-Agent System & Verification Core"]
+        V5Orchestrator["V5 Orchestrator Engine"]
         Router["Router Agent<br/>(Intent Classification)"]
         Planner["Planner Agent<br/>(Task Decomposition)"]
-        Runner["Agent Loop Runner<br/>(Action-Observation Cycle)"]
+        SelfCorrection["Self-Correction & Reflection Loop"]
         
         subgraph Agents["Specialized Agents"]
             CodingAgent["Coding Agent"]
@@ -76,8 +84,10 @@ flowchart TD
             GeneralAgent["General Agent"]
         end
         
-        Router --> Planner --> Runner
-        Runner --> Agents
+        V5Orchestrator --> MemoryManager
+        V5Orchestrator --> Router --> Planner
+        Planner --> Agents
+        Agents --> SelfCorrection
     end
 
     subgraph ToolLayer["Sandboxed Local Tool Execution"]
@@ -90,7 +100,7 @@ flowchart TD
         ToolRegistry --> FSTools & TermTools & PyTools & GitTools
     end
 
-    CLI --> Router
+    CLI --> V5Orchestrator
     CLI --> Detector
     TierSelector --> ModelManager
     Agents --> ToolRegistry
@@ -108,22 +118,27 @@ LocLM automatically benchmarks your hardware environment on launch:
 - **Accelerator Detection**: Auto-detects NVIDIA CUDA GPUs, Apple Silicon Metal (unified memory), and AMD ROCm.
 - **Hardware Tiers**: Automatically classifies hardware into Tiers (0 to 5) to adjust model parameters (context window size, batching, thread pool concurrency, quantization level).
 
-### 2. 🧠 Model Management Layer (`loclm.models`)
+### 2. 🧠 Model Management & Cascade Layer (`loclm.models`)
 - Integrates with local inference backends (Ollama).
-- Implements dynamic model selection based on hardware capabilities and user task requirements.
-- Graceful fallbacks: automatically falls back to lightweight models (e.g., `qwen2.5:1.5b` or `tinyllama`) if memory bottlenecks occur.
+- **Model Cascade Manager**: Implements multi-tier fallback execution if model limits or memory pressure are encountered.
+- Dynamic model selection based on hardware capabilities and user task requirements.
 
-### 3. 🤖 V4 Multi-Agent Orchestration (`loclm.agents`)
+### 3. 💾 V5 Offline Local Memory (`loclm.memory`)
+- **SQLite Memory Store**: Offline, zero-dependency storage for project knowledge, codebase rules, user facts, and task history.
+- **Context Retrieval (RAG)**: Automatically injects relevant past memory snippets into agent context prompts.
+
+### 4. 🤖 V5 Multi-Agent System & Self-Correction (`loclm.agents`)
+- **V5 Orchestrator Engine**: Coordinates context retrieval, routing, task planning, execution, and persistent memory logging.
 - **Router Agent**: Parses incoming prompt intent and dispatches tasks to dedicated specialized agents.
 - **Planner Agent**: Breaks complex, multi-step queries into structured execution paths.
+- **Self-Correction & Verification Loop**: Automatically reflects on tool execution errors and re-evaluates inputs to resolve failures before returning responses.
 - **Specialized Agents**:
   - `CodingAgent`: Handles code analysis, refactoring, patch creation, and syntax validation.
   - `TerminalAgent`: Interprets natural language requests into shell operations with built-in safety boundaries.
   - `KnowledgeAgent`: Synthesizes project structure, documentation, and localized knowledge items.
   - `GeneralAgent`: Handles general dialogue, reasoning, and standard assistant interactions.
-- **Agent Loop Runner**: Manages autonomous tool-calling cycles with reflection and loop limit safeguards.
 
-### 4. 🛠️ Sandboxed Tool System (`loclm.tools`)
+### 5. 🛠️ Sandboxed Tool System (`loclm.tools`)
 - **Filesystem**: Safe file reading, modification, tree traversal, and diff generation within workspace boundaries.
 - **Terminal Sandbox**: Executes commands with explicit permission enforcement (`READ_ONLY`, `USER_CONFIRM`, `FULL_CONTROL`).
 - **Python Sandbox**: Isolated Python runtime execution for mathematical modeling and data processing.

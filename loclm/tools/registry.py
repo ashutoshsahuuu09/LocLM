@@ -8,10 +8,18 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from loclm.tools.ast_tools import ASTRenameSymbolTool, ASTValidateSyntaxTool
 from loclm.tools.base import BaseTool, ToolCategory, ToolPermissionLevel, ToolResult
-from loclm.tools.filesystem import FileInfoTool, ListDirTool, ReadFileTool, SearchFilesTool, WriteFileTool
+from loclm.tools.filesystem import (
+    CreateProjectScaffoldTool,
+    FileInfoTool,
+    ListDirTool,
+    ReadFileTool,
+    SearchFilesTool,
+    WriteFileTool,
+)
 from loclm.tools.git_tools import GitBranchTool, GitCommitTool, GitDiffTool, GitLogTool, GitStatusTool
-from loclm.tools.github import GitHubRemoteTool, GitHubStatusTool
+from loclm.tools.github import GitHubAuthTool, GitHubRemoteTool, GitHubStatusTool
 from loclm.tools.python_exec import RunPythonScriptTool
 from loclm.tools.security import SecurityGuard
 from loclm.tools.terminal import RunTerminalCommandTool
@@ -30,12 +38,15 @@ class ToolRegistry:
     def _register_default_tools(self) -> None:
         """Register all core V2 local tools by default."""
         default_tools: list[BaseTool] = [
-            # Filesystem
+            # Filesystem & AST
             ReadFileTool(self._guard),
             WriteFileTool(self._guard),
             ListDirTool(self._guard),
             SearchFilesTool(self._guard),
             FileInfoTool(self._guard),
+            CreateProjectScaffoldTool(self._guard),
+            ASTValidateSyntaxTool(self._guard),
+            ASTRenameSymbolTool(self._guard),
             # Terminal
             RunTerminalCommandTool(self._guard),
             # Python
@@ -48,6 +59,7 @@ class ToolRegistry:
             GitBranchTool(self._guard),
             GitHubStatusTool(self._guard),
             GitHubRemoteTool(self._guard),
+            GitHubAuthTool(self._guard),
         ]
 
         for t in default_tools:

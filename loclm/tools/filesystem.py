@@ -322,3 +322,92 @@ class FileInfoTool(BaseTool):
             output=info,
             metadata={"size_bytes": stat.st_size, "is_dir": target.is_dir()},
         )
+
+
+class CreateProjectScaffoldTool(BaseTool):
+    """Tool to create complete directory structure and files for a project scaffold."""
+
+    name = "create_project_scaffold"
+    description = "Create full directory structure and initial source files for a new or designed project."
+    category = ToolCategory.FILESYSTEM
+    permission_level = ToolPermissionLevel.CONFIRM
+
+    def __init__(self, guard: SecurityGuard | None = None) -> None:
+        self._guard = guard or SecurityGuard()
+
+    def get_parameters(self) -> list[ToolParameter]:
+        return [
+            ToolParameter(
+                name="root_path",
+                type="string",
+                description="Root directory path for the project scaffold (default: current directory)",
+                required=False,
+                default=".",
+            ),
+            ToolParameter(
+                name="directories",
+                type="array",
+                description="List of relative directory paths to create",
+                required=False,
+                default=[],
+            ),
+            ToolParameter(
+                name="files",
+                type="object",
+                description="Map of relative file paths to their content strings",
+                required=False,
+                default={},
+            ),
+        ]
+
+    async def execute(self, **kwargs: Any) -> ToolResult:
+        root_path_str = kwargs.get("root_path", ".") or "."
+        directories = kwargs.get("directories", []) or []
+        files = kwargs.get("files", {}) or {}
+
+        root = Path(root_path_str).resolve()
+        is_valid, reason = self._guard.validate_path(root)
+        if not is_valid:
+            return ToolResult(success=False, error=reason)
+
+        created_dirs: list[str] = []
+        created_files: list[str] = []
+
+        try:
+            # Create root directory if it doesn't exist
+            root.mkdir(parents=True, exist_ok=True)
+            created_dirs.append(str(root))
+
+            # Create requested directories
+            for d in directories:
+                d_path = (root / d).resolve()
+                valid, err = self._guard.validate_path(d_path)
+                if valid:
+                    d_path.mkdir(parents=True, exist_ok=True)
+                    created_dirs.append(str(d_path))
+
+            # Create requested files with contents
+            for rel_file, content in files.items():
+                f_path = (root / rel_file).resolve()
+                valid, err = self._guard.validate_path(f_path)
+                if valid:
+                    f_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(f_path, "w", encoding="utf-8") as f_out:
+                        f_out.write(content)
+                    created_files.append(str(rel_file))
+
+            summary = (
+                f"Successfully created project scaffold at: {root}\n"
+                f"Directories created ({len(created_dirs)}): {', '.join(directories) if directories else 'root'}\n"
+                f"Files written ({len(created_files)}): {', '.join(created_files)}"
+            )
+
+            return ToolResult(
+                success=True,
+                output=summary,
+                metadata={"root": str(root), "files_created": created_files, "dirs_created": created_dirs},
+            )
+
+        except Exception as e:
+            return ToolResult(success=False, error=f"Failed to create project scaffold: {e}")
+

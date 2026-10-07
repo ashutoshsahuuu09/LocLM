@@ -48,7 +48,20 @@ class RouterAgent:
         # Rule-based fast heuristics for instant routing
         input_lower = user_input.lower().strip()
 
-        if any(kw in input_lower for kw in ["code", "function", "def ", "class ", "python", "bug", "refactor", "import "]):
+        if any(kw in input_lower for kw in [
+            "create project", "make project", "prep project", "design project",
+            "build project", "scaffold project", "create app", "new project", "design app"
+        ]):
+            logger.info("Fast-route rule matched: PROJECT")
+            return AgentRole.PROJECT
+
+        if any(kw in input_lower for kw in [
+            "refactor", "rename symbol", "ast validate", "rename function", "rename class", "multi-repo", "cross-repo"
+        ]):
+            logger.info("Fast-route rule matched: REFACTORING")
+            return AgentRole.REFACTORING
+
+        if any(kw in input_lower for kw in ["code", "function", "def ", "class ", "python", "bug", "import "]):
             logger.info("Fast-route rule matched: CODING")
             return AgentRole.CODING
 

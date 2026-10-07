@@ -13,6 +13,7 @@ from loclm.agents.coding import CodingAgent
 from loclm.agents.general_agent import GeneralAgent
 from loclm.agents.knowledge_agent import KnowledgeAgent
 from loclm.agents.planner import PlannerAgent
+from loclm.agents.project_agent import ProjectAgent
 from loclm.agents.router import RouterAgent
 from loclm.agents.terminal_agent import TerminalAgent
 from loclm.models.manager import ModelManager
@@ -39,6 +40,7 @@ class AgentOrchestrator:
         # Agent Map
         self._agents: dict[AgentRole, BaseAgent] = {
             AgentRole.CODING: CodingAgent(self._model_manager, self._tool_registry),
+            AgentRole.PROJECT: ProjectAgent(self._model_manager, self._tool_registry),
             AgentRole.TERMINAL: TerminalAgent(self._model_manager, self._tool_registry),
             AgentRole.KNOWLEDGE: KnowledgeAgent(self._model_manager, self._tool_registry),
             AgentRole.GENERAL: GeneralAgent(self._model_manager),

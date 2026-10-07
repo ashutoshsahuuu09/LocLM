@@ -141,3 +141,85 @@ class GitHubRemoteTool(BaseTool):
             )
         else:
             return ToolResult(success=False, error=err.decode("utf-8", errors="replace"))
+
+
+class GitHubAuthTool(BaseTool):
+    """Tool to inspect and execute GitHub authentication via GitHub CLI (gh) or PAT."""
+
+    name = "github_auth"
+    description = "Check GitHub CLI authentication status or log in with a Personal Access Token (PAT)."
+    category = ToolCategory.GIT
+    permission_level = ToolPermissionLevel.ALLOW
+
+    def __init__(self, guard: SecurityGuard | None = None) -> None:
+        self._guard = guard or SecurityGuard()
+
+    def get_parameters(self) -> list[ToolParameter]:
+        return [
+            ToolParameter(
+                name="action",
+                type="string",
+                description="Action: 'status' (check auth status) or 'login_token' (login with token)",
+                required=False,
+                default="status",
+            ),
+            ToolParameter(
+                name="token",
+                type="string",
+                description="GitHub Personal Access Token (required if action='login_token')",
+                required=False,
+                default="",
+            ),
+        ]
+
+    async def execute(self, **kwargs: Any) -> ToolResult:
+        action = kwargs.get("action", "status") or "status"
+        token = kwargs.get("token", "").strip()
+
+        if action == "login_token":
+            if not token:
+                return ToolResult(
+                    success=False,
+                    error="Personal Access Token ('token') is required for action 'login_token'.",
+                )
+            
+            proc = await asyncio.create_subprocess_shell(
+                f"echo {token} | gh auth login --with-token",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            out, err = await proc.communicate()
+            if proc.returncode == 0:
+                return ToolResult(
+                    success=True,
+                    output="Successfully authenticated GitHub CLI with Personal Access Token.",
+                )
+            else:
+                return ToolResult(
+                    success=False,
+                    error=f"GitHub CLI token login failed: {err.decode('utf-8', errors='replace')}",
+                )
+
+        # Default action: check status
+        proc = await asyncio.create_subprocess_shell(
+            "gh auth status",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        out, err = await proc.communicate()
+        status_text = (out.decode("utf-8", errors="replace") + "\n" + err.decode("utf-8", errors="replace")).strip()
+
+        if proc.returncode == 0:
+            return ToolResult(
+                success=True,
+                output=f"GitHub Authentication Status:\n{status_text}",
+                metadata={"is_authenticated": True},
+            )
+        else:
+            return ToolResult(
+                success=False,
+                output=f"GitHub Authentication Status: Not authenticated.\nDetails:\n{status_text}",
+                metadata={"is_authenticated": False},
+                error="GitHub CLI is not logged in. Run 'gh auth login' or provide a Personal Access Token.",
+            )
+

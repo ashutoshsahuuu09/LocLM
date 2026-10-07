@@ -32,7 +32,7 @@ class AppConfig(BaseModel):
 
     # App metadata
     app_name: str = "LocLM"
-    app_version: str = "0.1.0"
+    app_version: str = "6.0.0"
     app_tagline: str = "Local * Private * Agentic"
 
     # Privacy
@@ -74,6 +74,10 @@ class AppState:
         self.profile: HardwareProfile | None = None
         self.runtime: ModelRuntime | None = None
         self.model_manager: ModelManager | None = None
+        self.memory_manager: Any | None = None
+        self.v5_orchestrator: Any | None = None
+        self.multi_repo_manager: Any | None = None
+        self.test_runner: Any | None = None
         self._initialized: bool = False
 
     @property
@@ -91,6 +95,7 @@ class AppState:
         5. Create runtime
         6. Create model manager
         7. Discover and select models
+        8. Initialize memory manager, V5/V6 orchestrator, multi-repo manager, test runner
 
         Args:
             config_dir: Override config directory path.
@@ -134,8 +139,24 @@ class AppState:
         # 7. Initialize model manager (discover models, auto-select)
         await self.model_manager.initialize()
 
+        # 8. Initialize V6 Memory, Multi-Repo, Test Runner, and Orchestrator
+        from loclm.agents.v5_orchestrator import V5Orchestrator
+        from loclm.memory.manager import MemoryManager
+        from loclm.repo.manager import MultiRepoManager
+        from loclm.testing.runner import RegressionTestRunner
+
+        self.memory_manager = MemoryManager()
+        self.multi_repo_manager = MultiRepoManager()
+        self.test_runner = RegressionTestRunner()
+
+        if self.model_manager:
+            self.v5_orchestrator = V5Orchestrator(
+                model_manager=self.model_manager,
+                memory_manager=self.memory_manager,
+            )
+
         self._initialized = True
-        logger.info("LocLM initialized successfully")
+        logger.info("LocLM initialized successfully with V6 Architecture")
 
     async def shutdown(self) -> None:
         """Clean shutdown of all components."""

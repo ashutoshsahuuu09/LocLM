@@ -82,14 +82,25 @@ async def test_terminal_command_tool(tmp_path: Path):
 
 
 @pytest.mark.asyncio
+async def test_github_auth_tool():
+    from loclm.tools.github import GitHubAuthTool
+    tool = GitHubAuthTool()
+    res = await tool.execute(action="status")
+    # Execute returns status result regardless of login state
+    assert res.output is not None
+    assert "GitHub Authentication Status" in res.output
+
+
+@pytest.mark.asyncio
 async def test_tool_registry():
     registry = ToolRegistry()
     tools = registry.list_tools()
-    assert len(tools) == 14
+    assert len(tools) == 18
 
     schema = registry.export_tools_schema()
-    assert len(schema) == 14
+    assert len(schema) == 18
 
     # Execute read_file through registry
     res = await registry.execute_tool("list_dir", path=".")
     assert res.success is True
+

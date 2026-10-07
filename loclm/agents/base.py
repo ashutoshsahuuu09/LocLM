@@ -26,6 +26,10 @@ class AgentRole(StrEnum):
     GENERAL = "general"
     TERMINAL = "terminal"
     KNOWLEDGE = "knowledge"
+    PROJECT = "project"
+    REFACTORING = "refactoring"
+
+
 
 
 class ToolCall(BaseModel):
