@@ -1,0 +1,54 @@
+# LocLM Configuration
+# All settings for the local AI assistant
+
+app:
+  name: "LocLM"
+  version: "0.1.0"
+  tagline: "Local • Private • Agentic"
+
+# Privacy & Offline Settings
+privacy:
+  offline_only: true
+  telemetry: false
+  block_network: true
+  allowed_hosts:
+    - "127.0.0.1"
+    - "localhost"
+
+# Runtime Configuration
+runtime:
+  backend: "ollama"
+  ollama_host: "http://127.0.0.1:11434"
+  request_timeout: 120
+  stream_responses: true
+
+# Model Selection Mode
+# "auto" = automatically select based on hardware
+# Specific model name = use that model
+models:
+  general: "auto"
+  coding: "auto"
+  reasoning: "auto"
+  embedding: "auto"
+
+# Agent Loop Limits
+agent:
+  max_iterations: 25
+  max_retries: 3
+  max_execution_time: 300  # seconds
+  max_tool_output: 50000   # characters
+
+# Chat Settings
+chat:
+  max_context_messages: 50
+  max_tokens: 1024          # Max response tokens -- keeps responses fast
+  temperature: 0.6          # Lower = faster, more focused responses
+  system_prompt: |
+    You are LocLM, a helpful local AI assistant running entirely on the user's computer.
+    You are privacy-focused and operate fully offline.
+    Be concise, accurate, and helpful. Keep responses short unless asked for detail.
+
+# Logging
+logging:
+  level: "INFO"
+  file: null  # Set to a path to enable file logging

@@ -1,0 +1,126 @@
+# LocLM Model Configuration
+# Maps hardware performance tiers to recommended models
+#
+# Tier 0: CPU + <8GB RAM        → Tiny models
+# Tier 1: CPU + 8-16GB RAM      → Small models
+# Tier 2: GPU 4-8GB VRAM        → Small/Medium quantized
+# Tier 3: GPU 8-16GB VRAM       → Medium/Large quantized
+# Tier 4: GPU 16-24GB VRAM      → Large models
+# Tier 5: GPU 24GB+ VRAM        → Advanced models
+
+tiers:
+  tier_0:
+    name: "CPU Low"
+    description: "CPU-only with limited RAM"
+    models:
+      general: "tinyllama:latest"
+      coding: "tinyllama:latest"
+      reasoning: "tinyllama:latest"
+    max_context: 2048
+    notes: "Minimal capability, basic Q&A only"
+
+  tier_1:
+    name: "CPU"
+    description: "CPU-only with adequate RAM"
+    models:
+      general: "qwen2.5:1.5b"
+      coding: "qwen2.5-coder:1.5b"
+      reasoning: "qwen2.5:3b"
+    max_context: 4096
+    notes: "Reasonable for simple tasks, slower inference"
+
+  tier_2:
+    name: "Low GPU"
+    description: "Entry-level GPU with 4-8GB VRAM"
+    models:
+      general: "llama3.2:latest"
+      coding: "llama3.2:latest"
+      reasoning: "llama3.2:latest"
+    max_context: 8192
+    notes: "High speed, ultra-fast responses (fits fully in 4GB VRAM)"
+
+  tier_3:
+    name: "Mid GPU"
+    description: "Mid-range GPU with 8-16GB VRAM"
+    models:
+      general: "qwen2.5:14b"
+      coding: "qwen2.5-coder:14b"
+      reasoning: "qwen2.5:14b"
+    max_context: 16384
+    notes: "Strong capability for most tasks"
+
+  tier_4:
+    name: "High GPU"
+    description: "High-end GPU with 16-24GB VRAM"
+    models:
+      general: "qwen2.5:32b"
+      coding: "qwen2.5-coder:32b"
+      reasoning: "qwen2.5:32b"
+    max_context: 32768
+    notes: "Excellent capability, large context"
+
+  tier_5:
+    name: "Ultra GPU"
+    description: "Top-tier GPU with 24GB+ VRAM"
+    models:
+      general: "qwen2.5:72b"
+      coding: "qwen2.5-coder:32b"
+      reasoning: "qwen2.5:72b"
+    max_context: 65536
+    notes: "Maximum capability"
+
+# Fallback chain: if preferred model unavailable, try next
+fallback_order:
+  general:
+    - "qwen2.5:72b"
+    - "qwen2.5:32b"
+    - "qwen2.5:14b"
+    - "qwen2.5:7b"
+    - "qwen2.5:3b"
+    - "qwen2.5:1.5b"
+    - "qwen2.5:0.5b"
+    - "llama3.2:3b"
+    - "llama3.2:1b"
+    - "gemma2:2b"
+    - "tinyllama:latest"
+
+  coding:
+    - "qwen2.5-coder:32b"
+    - "qwen2.5-coder:14b"
+    - "qwen2.5-coder:7b"
+    - "qwen2.5-coder:3b"
+    - "qwen2.5-coder:1.5b"
+    - "qwen2.5:7b"
+    - "qwen2.5:3b"
+    - "deepseek-coder-v2:16b"
+    - "codellama:7b"
+
+  reasoning:
+    - "qwen2.5:72b"
+    - "qwen2.5:32b"
+    - "qwen2.5:14b"
+    - "qwen2.5:7b"
+    - "qwen2.5:3b"
+    - "llama3.2:3b"
+    - "gemma2:2b"
+
+# Model size estimates (GB) for resource checking
+model_sizes:
+  "tinyllama:latest": 0.6
+  "qwen2.5:0.5b": 0.4
+  "qwen2.5:1.5b": 1.0
+  "qwen2.5:3b": 2.0
+  "qwen2.5:7b": 4.5
+  "qwen2.5:14b": 9.0
+  "qwen2.5:32b": 20.0
+  "qwen2.5:72b": 45.0
+  "qwen2.5-coder:1.5b": 1.0
+  "qwen2.5-coder:3b": 2.0
+  "qwen2.5-coder:7b": 4.5
+  "qwen2.5-coder:14b": 9.0
+  "qwen2.5-coder:32b": 20.0
+  "llama3.2:1b": 0.7
+  "llama3.2:3b": 2.0
+  "gemma2:2b": 1.6
+  "deepseek-coder-v2:16b": 10.0
+  "codellama:7b": 4.0
