@@ -15,8 +15,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from loclm.agents.base import AgentRole
-
 logger = logging.getLogger(__name__)
 
 
@@ -33,7 +31,7 @@ class AuditRecord(BaseModel):
     """Immutable audit trail record for an audited system operation."""
 
     timestamp: float = Field(default_factory=time.time)
-    agent_role: AgentRole = Field(default=AgentRole.GENERAL)
+    agent_role: str = Field(default="general", description="Agent role performing the action")
     action_type: str = Field(description="Type of action, e.g. tool_call, shell_exec, file_access")
     target_resource: str = Field(description="Target tool, file path, or command")
     allowed: bool = Field(description="True if operation was permitted")
@@ -88,7 +86,7 @@ class PolicyGuard:
         self,
         tool_name: str,
         kwargs: dict[str, Any],
-        role: AgentRole = AgentRole.GENERAL,
+        role: Any = "general",
     ) -> bool:
         """Audit a proposed tool call before execution.
 
@@ -103,20 +101,22 @@ class PolicyGuard:
         Raises:
             PolicyViolationError: If action violates security policy.
         """
+        role_str = str(role.value) if hasattr(role, "value") else str(role)
+
         # If terminal/command tool, audit command string
         if tool_name in ("run_command", "terminal", "bash", "cmd"):
             cmd = str(kwargs.get("command") or kwargs.get("cmd") or "")
             if cmd:
-                self.audit_shell_command(cmd, role=role)
+                self.audit_shell_command(cmd, role=role_str)
 
         # If filesystem tool, audit target path
         if tool_name in ("write_to_file", "view_file", "replace_file_content", "read_file"):
             target = str(kwargs.get("TargetFile") or kwargs.get("AbsolutePath") or kwargs.get("path") or "")
             if target:
-                self.audit_path_access(target, role=role)
+                self.audit_path_access(target, role=role_str)
 
         record = AuditRecord(
-            agent_role=role,
+            agent_role=role_str,
             action_type="tool_call",
             target_resource=tool_name,
             allowed=True,
@@ -126,15 +126,17 @@ class PolicyGuard:
         self._audit_trail.append(record)
         return True
 
-    def audit_shell_command(self, command: str, role: AgentRole = AgentRole.GENERAL) -> bool:
+    def audit_shell_command(self, command: str, role: Any = "general") -> bool:
         """Audit shell command for destructive patterns.
 
         Raises:
             PolicyViolationError: If command matches a blocked destructive pattern.
         """
+        role_str = str(role.value) if hasattr(role, "value") else str(role)
+
         if not self.policy.allow_terminal_execution:
             record = AuditRecord(
-                agent_role=role,
+                agent_role=role_str,
                 action_type="shell_exec",
                 target_resource=command[:100],
                 allowed=False,
@@ -147,7 +149,7 @@ class PolicyGuard:
         for pattern in self.policy.blocked_command_patterns:
             if re.search(pattern, command, re.IGNORECASE):
                 record = AuditRecord(
-                    agent_role=role,
+                    agent_role=role_str,
                     action_type="shell_exec",
                     target_resource=command[:100],
                     allowed=False,
@@ -161,7 +163,7 @@ class PolicyGuard:
                 )
 
         record = AuditRecord(
-            agent_role=role,
+            agent_role=role_str,
             action_type="shell_exec",
             target_resource=command[:100],
             allowed=True,
@@ -171,18 +173,19 @@ class PolicyGuard:
         self._audit_trail.append(record)
         return True
 
-    def audit_path_access(self, path_str: str, role: AgentRole = AgentRole.GENERAL) -> bool:
+    def audit_path_access(self, path_str: str, role: Any = "general") -> bool:
         """Audit file path access against forbidden path prefixes.
 
         Raises:
             PolicyViolationError: If path accesses restricted system locations.
         """
+        role_str = str(role.value) if hasattr(role, "value") else str(role)
         normalized = str(Path(path_str).resolve())
 
         for pattern in self.policy.forbidden_path_prefixes:
             if re.search(pattern, normalized, re.IGNORECASE) or re.search(pattern, path_str, re.IGNORECASE):
                 record = AuditRecord(
-                    agent_role=role,
+                    agent_role=role_str,
                     action_type="file_access",
                     target_resource=path_str,
                     allowed=False,
@@ -196,7 +199,7 @@ class PolicyGuard:
                 )
 
         record = AuditRecord(
-            agent_role=role,
+            agent_role=role_str,
             action_type="file_access",
             target_resource=path_str,
             allowed=True,
