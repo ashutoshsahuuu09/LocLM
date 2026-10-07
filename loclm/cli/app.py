@@ -341,6 +341,50 @@ def _handle_slash_command(cmd: str, orchestrator: Orchestrator, state: AppState)
                 state.model_manager.active_model,
             )
 
+    elif command in ("/workspace", "/workspaces", "/ws"):
+        from loclm.workspace.manager import WorkspaceManager
+        from rich.table import Table
+
+        wm = WorkspaceManager()
+        workspaces = wm.list_workspaces()
+        if not workspaces:
+            print_info("No approved workspaces registered. Use 'loclm workspace add' to register a folder.")
+        else:
+            table = Table(title="Approved Workspaces", border_style="bright_blue")
+            table.add_column("No.", style="cyan", justify="right")
+            table.add_column("Name", style="bold white")
+            table.add_column("Path", style="dim white")
+            table.add_column("Permission", style="bold green")
+
+            for idx, ws in enumerate(workspaces, 1):
+                table.add_row(str(idx), ws.name, ws.path, ws.permission.value.upper())
+            console.print(table)
+
+    elif command == "/use":
+        if len(parts) > 1:
+            target_ws = parts[1].strip()
+            from loclm.workspace.manager import WorkspaceManager
+            wm = WorkspaceManager()
+            try:
+                entry = wm.use_workspace(target_ws)
+                print_success(f"Switched active workspace to '{entry.name}' ({entry.path}).")
+            except KeyError as exc:
+                print_error(str(exc))
+        else:
+            print_warning("Usage: /use <workspace_name>")
+
+    elif command in ("/project", "/projects"):
+        if orchestrator.workspace_manager.context.active_workspace:
+            active_name = orchestrator.workspace_manager.context.active_workspace.name
+            info = orchestrator.workspace_manager.inspect_workspace(active_name)
+            console.print(f"\n[bold white]Active Workspace Project:[/] [bold cyan]{active_name}[/]")
+            console.print(f"Path: {info.get('path')}")
+            console.print(f"Permission: [bold green]{info.get('permission')}[/]")
+            console.print(f"Languages: {', '.join(info.get('languages', []))}")
+            console.print(f"Frameworks: {', '.join(info.get('frameworks', []))}\n")
+        else:
+            print_info("No active workspace. Use '/workspace' to view workspaces or '/use <name>' to activate one.")
+
     else:
         print_warning(f"Unknown command: {command}. Type /help for available commands.")
 
