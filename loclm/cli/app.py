@@ -876,7 +876,7 @@ def project_create(
             success, created_files, report = pm.execute_project_creation(plan)
             print_success(f"\nProject '{name}' created successfully in '{plan.project_dir}':")
             for f in created_files:
-                console.print(f"  ✓ {f}")
+                console.print(f"  [bold green]+[/] {f}")
             console.print(f"\n[bold green]{len(created_files)} items created & verified.[/]")
         else:
             print_info("Project creation cancelled.")

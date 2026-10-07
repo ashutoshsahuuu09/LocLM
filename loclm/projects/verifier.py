@@ -54,9 +54,9 @@ class ProjectVerifier:
                 checked += 1
                 if not target.exists():
                     missing.append(rel_path)
-                    details.append(f"✗ Missing: {rel_path}")
+                    details.append(f"- Missing: {rel_path}")
                 else:
-                    details.append(f"✓ {rel_path}")
+                    details.append(f"+ {rel_path}")
 
         # 2. Syntax validation for Python and JSON files
         if root.exists():

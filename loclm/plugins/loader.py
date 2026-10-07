@@ -71,7 +71,7 @@ class PluginManifest:
 
     def summary(self) -> str:
         """Human-readable summary string for display."""
-        status = "✓" if self.is_valid else "✗"
+        status = "OK" if self.is_valid else "FAIL"
         return (
             f"{status} [{self.plugin_id}] {self.name} v{self.version} — "
             f"{len(self.tools)} tool(s), {len(self.agents)} agent(s)"

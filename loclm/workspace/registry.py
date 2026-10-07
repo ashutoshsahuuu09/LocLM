@@ -45,6 +45,14 @@ class WorkspaceRegistry:
         self._entries: dict[str, WorkspaceEntry] = {}
         self._load()
 
+    def _derive_default_name(self, target_path: Path) -> str:
+        """Derive a friendly non-empty workspace name from path."""
+        if target_path.name:
+            return target_path.name
+        if target_path.drive:
+            return f"{target_path.drive.rstrip(':').upper()}_Drive"
+        return "Root_Workspace"
+
     def _load(self) -> None:
         """Load entries from workspaces.json."""
         if not self.registry_file.exists():
@@ -54,10 +62,13 @@ class WorkspaceRegistry:
         try:
             content = self.registry_file.read_text(encoding="utf-8")
             data = json.loads(content)
-            self._entries = {
-                name: WorkspaceEntry(**item)
-                for name, item in data.items()
-            }
+            self._entries = {}
+            for key, item in data.items():
+                target_p = Path(item.get("path", "")).resolve()
+                name = item.get("name", "").strip() or key.strip() or self._derive_default_name(target_p)
+                item["name"] = name
+                entry = WorkspaceEntry(**item)
+                self._entries[name] = entry
         except Exception as exc:
             logger.warning("Failed to load workspace registry from %s: %s", self.registry_file, exc)
             self._entries = {}
@@ -73,14 +84,14 @@ class WorkspaceRegistry:
 
     def add_workspace(
         self,
-        name: str,
+        name: str | None,
         path: str | Path,
         permission: WorkspacePermission | str = WorkspacePermission.WRITE,
     ) -> WorkspaceEntry:
         """Add an approved workspace entry.
 
         Args:
-            name: Workspace name.
+            name: Optional workspace name. Derived from path if empty.
             path: Target directory path.
             permission: Granted permission level (READ, WRITE, FULL).
 
@@ -90,15 +101,17 @@ class WorkspaceRegistry:
         target_path = Path(path).resolve()
         perm = WorkspacePermission(permission) if isinstance(permission, str) else permission
 
+        ws_name = name.strip() if name and name.strip() else self._derive_default_name(target_path)
+
         entry = WorkspaceEntry(
-            name=name,
+            name=ws_name,
             path=str(target_path),
             permission=perm,
             approved=True,
         )
-        self._entries[name] = entry
+        self._entries[ws_name] = entry
         self._save()
-        logger.info("Added workspace '%s' at '%s' [permission=%s]", name, target_path, perm.value)
+        logger.info("Added workspace '%s' at '%s' [permission=%s]", ws_name, target_path, perm.value)
         return entry
 
     def remove_workspace(self, name_or_path: str) -> bool:
@@ -120,21 +133,26 @@ class WorkspaceRegistry:
         """List all approved workspace entries."""
         return list(self._entries.values())
 
-    def get_workspace(self, name_or_path: str) -> WorkspaceEntry | None:
+    def get_workspace(self, name_or_path: str | None = None) -> WorkspaceEntry | None:
         """Find a workspace entry by name or exact/resolved path."""
+        if not name_or_path or not name_or_path.strip():
+            return list(self._entries.values())[0] if self._entries else None
+
+        query = name_or_path.strip()
+
         # 1. Match by name
-        if name_or_path in self._entries:
-            return self._entries[name_or_path]
+        if query in self._entries:
+            return self._entries[query]
 
         # 2. Case-insensitive name match
-        lower_query = name_or_path.lower()
+        lower_query = query.lower()
         for name, entry in self._entries.items():
             if name.lower() == lower_query:
                 return entry
 
         # 3. Match by path
         try:
-            target_path = Path(name_or_path).resolve()
+            target_path = Path(query).resolve()
             for entry in self._entries.values():
                 if entry.resolved_path == target_path:
                     return entry

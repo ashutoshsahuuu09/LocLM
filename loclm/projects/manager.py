@@ -45,14 +45,20 @@ class ProjectManager:
         workspace_name_or_path: str | None = None,
     ) -> ProjectPlan:
         """Parse requirements into a ProjectPlan and verify target workspace permission."""
-        ws_entry = (
-            self.workspace_manager.registry.get_workspace(workspace_name_or_path)
-            if workspace_name_or_path
-            else self.workspace_manager.context.active_workspace
-        )
+        ws_entry = None
+        if workspace_name_or_path:
+            ws_entry = self.workspace_manager.registry.get_workspace(workspace_name_or_path)
 
         if not ws_entry:
-            raise ValueError("No active or specified workspace found for project creation.")
+            ws_entry = self.workspace_manager.context.active_workspace
+
+        if not ws_entry:
+            workspaces = self.workspace_manager.list_workspaces()
+            if workspaces:
+                ws_entry = workspaces[0]
+
+        if not ws_entry:
+            raise ValueError("No active or approved workspace found for project creation. Use 'loclm workspace add' to register a folder.")
 
         if not ws_entry.permission.can_write:
             raise PermissionError(
