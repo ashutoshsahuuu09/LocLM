@@ -33,7 +33,7 @@
 
 ## 📐 Architecture Overview
 
-LocLM implements a modular **V7 Multi-Agent Architecture with Plugin System, Session Memory, Parallel Execution & Output Evaluation** backed by intelligent hardware profiling and sandboxed local execution tools.
+LocLM implements a modular **V8 Enterprise Architecture featuring Multi-Agent Swarm Collaboration, Dynamic Workflow DAG Engine, Multi-Agent Consensus Synthesis, and Autonomous Security Policy Guarding** backed by intelligent hardware profiling and sandboxed local execution tools.
 
 <p align="center">
   <img src="assets/loclm_architecture_visual.jpg" alt="LocLM Architecture Diagram" width="100%" />
@@ -45,6 +45,12 @@ LocLM implements a modular **V7 Multi-Agent Architecture with Plugin System, Ses
 flowchart TD
     subgraph UserInterface["Terminal & Interface"]
         CLI["loclm CLI / Interactive REPL"]
+    end
+
+    subgraph SecurityLayer["Autonomous Security Policy Guard (V8)"]
+        PolicyGuard["PolicyGuard Auditor<br/>(Path & Command Pattern Blocking)"]
+        AuditLog["Immutable Audit Trail"]
+        PolicyGuard --> AuditLog
     end
 
     subgraph HardwareLayer["Hardware & Resource Intelligence Module"]
@@ -64,53 +70,45 @@ flowchart TD
         CascadeManager --> ModelManager
     end
 
-    subgraph MemoryLayer["V5 Local Memory & RAG Engine"]
-        SQLiteStore["SQLite Memory Store<br/>(Offline Vectors & Facts)"]
-        MemoryManager["Memory Context Manager"]
+    subgraph MemoryLayer["V7/V5 Memory Core"]
+        SQLiteStore["SQLite Memory Store<br/>(Offline RAG & Vector Facts)"]
+        SessionMemory["Session Memory<br/>(Persistent Conversation Threads)"]
         
-        MemoryManager <--> SQLiteStore
+        SessionMemory <--> SQLiteStore
     end
 
-    subgraph AgentLayer["V7 Multi-Agent System & Evaluation Core"]
-        V7Orchestrator["V7 Orchestrator Engine"]
-        Router["Router Agent<br/>(Intent Classification)"]
-        Planner["Planner Agent<br/>(Task Decomposition)"]
-        ParallelExec["Parallel Step Executor<br/>(asyncio.gather)"]
-        SelfCorrection["Self-Correction & Reflection Loop"]
-        Evaluator["EvaluatorAgent<br/>(Quality Scoring + Retry)"]
-        
-        subgraph Agents["Specialized Agents"]
-            CodingAgent["Coding Agent"]
-            TerminalAgent["Terminal Agent"]
-            KnowledgeAgent["Knowledge Agent"]
-            GeneralAgent["General Agent"]
-            PluginAgents["Plugin Agents<br/>(Runtime-loaded)"]
-        end
-        
-        V7Orchestrator --> MemoryManager
-        V7Orchestrator --> Router --> Planner
-        Planner --> ParallelExec --> Agents
-        Agents --> SelfCorrection --> Evaluator
+    subgraph V8Orchestration["V8 Universal Multi-Agent & Swarm Core"]
+        V8Orchestrator["V8 Orchestrator Engine"]
+        Router["Router Agent"]
+        ConsensusEngine["Consensus Manager<br/>(Proposal Scoring & Synthesis)"]
+        SwarmEngine["Swarm Orchestrator<br/>(Leader ➔ Worker ➔ Critic ➔ Verifier)"]
+        DAGEngine["Workflow DAG Engine<br/>(Topological Grouping & Branching)"]
+        Evaluator["EvaluatorAgent<br/>(Quality Scoring & Auto Retry)"]
+
+        V8Orchestrator --> Router
+        V8Orchestrator --> ConsensusEngine
+        V8Orchestrator --> SwarmEngine
+        V8Orchestrator --> DAGEngine
+        DAGEngine --> Evaluator
     end
 
-    subgraph ToolLayer["Sandboxed Local Tool Execution"]
+    subgraph ToolLayer["Sandboxed Tool System"]
         ToolRegistry["Tool Registry & Permission Engine"]
+        PluginRegistry["Plugin Registry<br/>(~/.loclm/plugins/)"]
         FSTools["Filesystem Tools"]
         TermTools["Terminal Tools"]
         PyTools["Python Interpreter"]
-        GitTools["Git & GitHub Tools"]
+        GitTools["Git & Refactoring Tools"]
         
         ToolRegistry --> FSTools & TermTools & PyTools & GitTools
+        PluginRegistry --> ToolRegistry
     end
 
-    CLI --> V7Orchestrator
-    CLI --> Detector
+    CLI --> PolicyGuard
+    PolicyGuard --> V8Orchestrator
+    V8Orchestrator --> MemoryLayer
     TierSelector --> ModelManager
-    Agents --> ToolRegistry
-    ToolRegistry --> SecurityGuard["Security Policy Guard"]
-    SecurityGuard --> CLI
-    PluginRegistry["Plugin Registry<br/>(~/.loclm/plugins/)"] --> V7Orchestrator
-    SessionMemory["Session Memory<br/>(SQLite Thread Store)"] --> V7Orchestrator
+    V8Orchestrator --> ToolRegistry
 ```
 
 ---
@@ -128,17 +126,16 @@ LocLM automatically benchmarks your hardware environment on launch:
 - **Model Cascade Manager**: Implements multi-tier fallback execution if model limits or memory pressure are encountered.
 - Dynamic model selection based on hardware capabilities and user task requirements.
 
-### 3. 💾 V5 Offline Local Memory (`loclm.memory`)
+### 3. 💾 V7/V5 Offline Memory & Conversation Threads (`loclm.memory`)
 - **SQLite Memory Store**: Offline, zero-dependency storage for project knowledge, codebase rules, user facts, and task history.
-- **Context Retrieval (RAG)**: Automatically injects relevant past memory snippets into agent context prompts.
+- **Session Memory**: Persistent session conversation threads across turns.
 
-### 4. 🤖 V7 Multi-Agent System & Output Evaluation (`loclm.agents`)
-- **V7 Orchestrator Engine**: Coordinates context retrieval, routing, task planning, parallel execution, evaluation, and persistent memory logging.
-- **Router Agent**: Parses incoming prompt intent and dispatches tasks to dedicated specialized agents.
-- **Planner Agent**: Breaks complex, multi-step queries into structured execution paths.
-- **Parallel Step Executor**: Runs independent plan steps concurrently via `asyncio.gather` for dramatically faster multi-faceted task completion.
-- **Self-Correction & Verification Loop**: Automatically reflects on tool execution errors and re-evaluates inputs to resolve failures before returning responses.
-- **EvaluatorAgent (V7)**: After every primary agent response, scores output on **correctness, completeness, safety, and relevance** (0.0–1.0 each). If the weighted quality score falls below threshold, a single automatic retry is triggered with a structured improvement hint injected.
+### 4. 🤖 V8 Multi-Agent System, Swarm & Workflow Core (`loclm.agents` & `loclm.workflow`)
+- **V8 Orchestrator Engine**: Integrates Security Policy Guarding, Session Memory, RAG Context, Swarm Collaboration, Consensus Synthesis, Workflow DAG Execution, and Output Evaluation.
+- **Autonomous Workflow DAG Engine (`loclm.workflow`)**: Converts multi-step plans into Directed Acyclic Graphs with topological level concurrency, step retries, and conditional branching (`if`/`else` step logic).
+- **Multi-Agent Swarm Orchestrator (`SwarmOrchestrator`)**: Coordinates multi-round agent interactions across **Leader**, **Worker**, **Critic**, and **Verifier** roles.
+- **Consensus Engine (`ConsensusManager`)**: Gathers domain proposals from distinct agent roles, evaluates agreement scores, and synthesizes unified high-confidence consensus plans.
+- **EvaluatorAgent**: Quality scoring on correctness, completeness, safety, and relevance with automatic retry triggers.
 - **Specialized Agents**:
   - `CodingAgent`: Handles code analysis, refactoring, patch creation, and syntax validation.
   - `TerminalAgent`: Interprets natural language requests into shell operations with built-in safety boundaries.
