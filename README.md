@@ -1,10 +1,6 @@
 # LocLM — Universal Fully Offline Local AI Assistant
 
 <p align="center">
-  <img src="assets/loclm_hero_banner.jpg" alt="LocLM — Universal Fully Offline Local AI Assistant" width="100%" />
-</p>
-
-<p align="center">
   <strong>Local Models + Local Agents + Local Tools + Local Memory = 100% Local Intelligence</strong>
 </p>
 
