@@ -33,7 +33,7 @@
 
 ## 📐 Architecture Overview
 
-LocLM implements a modular **V8 Enterprise Architecture featuring Multi-Agent Swarm Collaboration, Dynamic Workflow DAG Engine, Multi-Agent Consensus Synthesis, and Autonomous Security Policy Guarding** backed by intelligent hardware profiling and sandboxed local execution tools.
+LocLM implements a modular **V9 Enterprise Architecture featuring Multi-Directory Workspace Management, Directory Router, Granular Permissions (READ, WRITE, FULL), Project Creation Agent, and Built-in Templates** backed by intelligent hardware profiling and sandboxed local execution tools.
 
 <p align="center">
   <img src="assets/loclm_architecture_visual.jpg" alt="LocLM Architecture Diagram" width="100%" />
@@ -47,68 +47,39 @@ flowchart TD
         CLI["loclm CLI / Interactive REPL"]
     end
 
-    subgraph SecurityLayer["Autonomous Security Policy Guard (V8)"]
-        PolicyGuard["PolicyGuard Auditor<br/>(Path & Command Pattern Blocking)"]
-        AuditLog["Immutable Audit Trail"]
-        PolicyGuard --> AuditLog
+    subgraph WorkspaceLayer["V9 Multi-Directory Workspace Core"]
+        WorkspaceManager["Workspace Manager"]
+        Registry["Workspace Registry<br/>(~/.loclm/workspaces.json)"]
+        DirRouter["Directory Router<br/>(Prompt Matching & Ambiguity Check)"]
+        PermissionGuard["Permission Guard<br/>(READ, WRITE, FULL, DENY)"]
+        PathGuard["Path Guard<br/>(Path Traversal Prevention)"]
+
+        WorkspaceManager --> Registry & DirRouter & PermissionGuard & PathGuard
     end
 
-    subgraph HardwareLayer["Hardware & Resource Intelligence Module"]
-        Detector["Hardware Detector<br/>(CPU, GPU VRAM, RAM)"]
-        Profiler["System Profiler & Benchmarking"]
-        TierSelector["Hardware Tier Selector<br/>(Tier 0 ➔ Tier 5)"]
-        
-        Detector --> Profiler --> TierSelector
+    subgraph ProjectLayer["V9 Project Creation Core"]
+        ProjectManager["Project Manager"]
+        CreatorAgent["ProjectCreationAgent<br/>(Plan ➔ Confirm ➔ Create ➔ Verify)"]
+        TemplateReg["Template Registry<br/>(FastAPI, React, Vite, ML, Node, Docker)"]
+        Inspector["Project Inspector"]
+        Verifier["Project Verifier"]
+
+        ProjectManager --> CreatorAgent & TemplateReg & Inspector & Verifier
     end
 
-    subgraph ModelLayer["Model Management & Cascade Layer"]
-        ModelManager["Model Manager"]
-        CascadeManager["Model Cascade & Fallback Manager"]
-        OllamaClient["Ollama Local Client"]
-        
-        ModelManager <--> OllamaClient
-        CascadeManager --> ModelManager
+    subgraph V8Orchestration["V8/V9 Multi-Agent Swarm Core"]
+        V9Orchestrator["V9 Orchestrator Engine"]
+        ConsensusEngine["Consensus Manager"]
+        SwarmEngine["Swarm Orchestrator"]
+        DAGEngine["Workflow DAG Engine"]
+        Evaluator["EvaluatorAgent"]
+
+        V9Orchestrator --> ConsensusEngine & SwarmEngine & DAGEngine & Evaluator
     end
 
-    subgraph MemoryLayer["V7/V5 Memory Core"]
-        SQLiteStore["SQLite Memory Store<br/>(Offline RAG & Vector Facts)"]
-        SessionMemory["Session Memory<br/>(Persistent Conversation Threads)"]
-        
-        SessionMemory <--> SQLiteStore
-    end
-
-    subgraph V8Orchestration["V8 Universal Multi-Agent & Swarm Core"]
-        V8Orchestrator["V8 Orchestrator Engine"]
-        Router["Router Agent"]
-        ConsensusEngine["Consensus Manager<br/>(Proposal Scoring & Synthesis)"]
-        SwarmEngine["Swarm Orchestrator<br/>(Leader ➔ Worker ➔ Critic ➔ Verifier)"]
-        DAGEngine["Workflow DAG Engine<br/>(Topological Grouping & Branching)"]
-        Evaluator["EvaluatorAgent<br/>(Quality Scoring & Auto Retry)"]
-
-        V8Orchestrator --> Router
-        V8Orchestrator --> ConsensusEngine
-        V8Orchestrator --> SwarmEngine
-        V8Orchestrator --> DAGEngine
-        DAGEngine --> Evaluator
-    end
-
-    subgraph ToolLayer["Sandboxed Tool System"]
-        ToolRegistry["Tool Registry & Permission Engine"]
-        PluginRegistry["Plugin Registry<br/>(~/.loclm/plugins/)"]
-        FSTools["Filesystem Tools"]
-        TermTools["Terminal Tools"]
-        PyTools["Python Interpreter"]
-        GitTools["Git & Refactoring Tools"]
-        
-        ToolRegistry --> FSTools & TermTools & PyTools & GitTools
-        PluginRegistry --> ToolRegistry
-    end
-
-    CLI --> PolicyGuard
-    PolicyGuard --> V8Orchestrator
-    V8Orchestrator --> MemoryLayer
-    TierSelector --> ModelManager
-    V8Orchestrator --> ToolRegistry
+    CLI --> WorkspaceManager
+    WorkspaceManager --> ProjectManager
+    ProjectManager --> V9Orchestrator
 ```
 
 ---
@@ -121,20 +92,24 @@ LocLM automatically benchmarks your hardware environment on launch:
 - **Accelerator Detection**: Auto-detects NVIDIA CUDA GPUs, Apple Silicon Metal (unified memory), and AMD ROCm.
 - **Hardware Tiers**: Automatically classifies hardware into Tiers (0 to 5) to adjust model parameters (context window size, batching, thread pool concurrency, quantization level).
 
-### 2. 🧠 Model Management & Cascade Layer (`loclm.models`)
-- Integrates with local inference backends (Ollama).
-- **Model Cascade Manager**: Implements multi-tier fallback execution if model limits or memory pressure are encountered.
-- Dynamic model selection based on hardware capabilities and user task requirements.
+### 2. 📁 V9 Multi-Directory Workspace Manager (`loclm.workspace`)
+- **Workspace Registry (`~/.loclm/workspaces.json`)**: Local, offline storage for approved directory paths and permissions.
+- **Granular Permissions**:
+  - `READ`: List, view, search, analyze. Edits/creations blocked.
+  - `WRITE`: Create, modify, rename files. Destructive ops require confirmation.
+  - `FULL`: Full workspace operation rights.
+- **Directory Router**: Automatically routes user prompts (e.g., `"Fix auth in CodeV"`) to the corresponding approved workspace. Prompts user if request is ambiguous across multiple projects.
+- **Path Traversal Prevention (`PathGuard`)**: Blocks `../` path traversal attempts escaping approved workspace boundaries.
 
-### 3. 💾 V7/V5 Offline Memory & Conversation Threads (`loclm.memory`)
-- **SQLite Memory Store**: Offline, zero-dependency storage for project knowledge, codebase rules, user facts, and task history.
-- **Session Memory**: Persistent session conversation threads across turns.
+### 3. 🏗️ V9 Project Creation Engine (`loclm.projects`)
+- **ProjectCreationAgent**: Natural language requirement parsing, architectural blueprint planning, file tree creation, code generation, and verification.
+- **Built-in Templates**: `FastAPI`, `React`, `Vite`, `Python CLI`, `Machine Learning`, `Data Science`, `Node.js`, `Express`, `Full Stack`, `Docker`.
+- **Existing File Protection**: Never overwrites files silently (`keep`, `replace`, `backup & replace`).
 
-### 4. 🤖 V8 Multi-Agent System, Swarm & Workflow Core (`loclm.agents` & `loclm.workflow`)
-- **V8 Orchestrator Engine**: Integrates Security Policy Guarding, Session Memory, RAG Context, Swarm Collaboration, Consensus Synthesis, Workflow DAG Execution, and Output Evaluation.
-- **Autonomous Workflow DAG Engine (`loclm.workflow`)**: Converts multi-step plans into Directed Acyclic Graphs with topological level concurrency, step retries, and conditional branching (`if`/`else` step logic).
+### 4. 🤖 V8/V9 Multi-Agent System & Swarm Core (`loclm.agents`)
+- **V9 Orchestrator Engine**: Coordinates Workspace Management, Directory Routing, Project Creation, Swarm Deliberation, Consensus Plan Synthesis, Workflow DAG Execution, and Output Evaluation.
 - **Multi-Agent Swarm Orchestrator (`SwarmOrchestrator`)**: Coordinates multi-round agent interactions across **Leader**, **Worker**, **Critic**, and **Verifier** roles.
-- **Consensus Engine (`ConsensusManager`)**: Gathers domain proposals from distinct agent roles, evaluates agreement scores, and synthesizes unified high-confidence consensus plans.
+- **Consensus Engine (`ConsensusManager`)**: Synthesizes unified high-confidence plans across agent roles.
 - **EvaluatorAgent**: Quality scoring on correctness, completeness, safety, and relevance with automatic retry triggers.
 - **Specialized Agents**:
   - `CodingAgent`: Handles code analysis, refactoring, patch creation, and syntax validation.

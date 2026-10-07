@@ -627,3 +627,244 @@ def run_tool(
 def version() -> None:
     """Show LocLM version."""
     console.print(f"[loclm.title]LocLM[/] [dim]v{__version__}[/]")
+
+
+# --------------------------------------------------------------------------
+# V9 Workspace & Project Commands
+# --------------------------------------------------------------------------
+
+workspace_app = typer.Typer(name="workspace", help="Manage multi-directory workspaces & permissions")
+project_app = typer.Typer(name="project", help="Create, inspect, and verify projects")
+
+app.add_typer(workspace_app, name="workspace")
+app.add_typer(project_app, name="project")
+
+
+@workspace_app.command(name="list")
+def workspace_list() -> None:
+    """List all approved local workspaces and permissions."""
+    from loclm.workspace.manager import WorkspaceManager
+    from rich.table import Table
+
+    wm = WorkspaceManager()
+    workspaces = wm.list_workspaces()
+
+    if not workspaces:
+        print_info("No approved workspaces found. Use 'loclm workspace add' to register a folder.")
+        return
+
+    table = Table(title="Approved Workspaces", border_style="bright_blue")
+    table.add_column("No.", style="cyan", justify="right")
+    table.add_column("Name", style="bold white")
+    table.add_column("Path", style="dim white")
+    table.add_column("Permission", style="bold green")
+
+    for idx, ws in enumerate(workspaces, 1):
+        table.add_row(str(idx), ws.name, ws.path, ws.permission.value.upper())
+
+    console.print(table)
+
+
+@workspace_app.command(name="add")
+def workspace_add(
+    path: str = typer.Option(None, "--path", "-p", help="Directory path to approve"),
+    name: str = typer.Option(None, "--name", "-n", help="Workspace friendly name"),
+    perm: int = typer.Option(None, "--perm", help="Permission level: 1=READ, 2=WRITE, 3=FULL"),
+) -> None:
+    """Add and approve a new local workspace directory."""
+    from loclm.workspace.manager import WorkspaceManager
+    from loclm.workspace.permissions import WorkspacePermission
+    from pathlib import Path
+
+    wm = WorkspaceManager()
+
+    if not path:
+        path = typer.prompt("Enter directory path")
+    target = Path(path).resolve()
+
+    if not target.exists() or not target.is_dir():
+        print_error(f"Directory '{target}' does not exist.")
+        return
+
+    if not name:
+        name = target.name
+
+    if not perm:
+        console.print("\nSelect permission level:")
+        console.print("  [1] Read only (READ)")
+        console.print("  [2] Read + Write (WRITE)")
+        console.print("  [3] Full workspace (FULL)")
+        perm_choice = typer.prompt("Select", type=int, default=2)
+    else:
+        perm_choice = perm
+
+    perm_map = {1: WorkspacePermission.READ, 2: WorkspacePermission.WRITE, 3: WorkspacePermission.FULL}
+    permission = perm_map.get(perm_choice, WorkspacePermission.WRITE)
+
+    entry = wm.add_workspace(name, target, permission)
+    print_success(f"Workspace '{entry.name}' added at '{entry.path}' with permission {entry.permission.value.upper()}.")
+
+
+@workspace_app.command(name="remove")
+def workspace_remove(name: str = typer.Argument(..., help="Workspace name or path to remove")) -> None:
+    """Remove workspace access permission. (Does NOT delete user files)."""
+    from loclm.workspace.manager import WorkspaceManager
+
+    wm = WorkspaceManager()
+    entry = wm.registry.get_workspace(name)
+
+    if not entry:
+        print_error(f"Workspace '{name}' not found.")
+        return
+
+    console.print(f"[bold yellow]Notice:[/] This will remove LocLM's access permission for '{entry.name}'.")
+    console.print("[dim]Your actual files and project folder will NOT be deleted.[/]\n")
+
+    confirm = typer.confirm(f"Remove access permission for '{entry.name}'?", default=True)
+    if confirm:
+        wm.remove_workspace(entry.name)
+        print_success(f"Access permission for '{entry.name}' removed.")
+    else:
+        print_info("Cancelled.")
+
+
+@workspace_app.command(name="use")
+def workspace_use(name: str = typer.Argument(..., help="Workspace name or path to activate")) -> None:
+    """Switch the active workspace context."""
+    from loclm.workspace.manager import WorkspaceManager
+
+    wm = WorkspaceManager()
+    try:
+        entry = wm.use_workspace(name)
+        print_success(f"Switched active workspace to '{entry.name}' ({entry.path}).")
+    except KeyError as exc:
+        print_error(str(exc))
+
+
+@workspace_app.command(name="info")
+def workspace_info(name: str = typer.Argument(None, help="Workspace name (default: active)")) -> None:
+    """Display information and indicators for a workspace."""
+    from loclm.workspace.manager import WorkspaceManager
+
+    wm = WorkspaceManager()
+    info = wm.inspect_workspace(name)
+
+    if "error" in info:
+        print_error(info["error"])
+        return
+
+    console.print(f"\n[bold white]Workspace Info: {info.get('name')}[/]")
+    console.print(f"Path: {info.get('path')}")
+    console.print(f"Permission: [bold green]{info.get('permission')}[/]")
+    console.print(f"Languages: {', '.join(info.get('languages', []))}")
+    console.print(f"Frameworks: {', '.join(info.get('frameworks', []))}")
+    console.print(f"Git: {info.get('has_git')} | Docker: {info.get('has_docker')}\n")
+
+
+@workspace_app.command(name="permissions")
+def workspace_permissions(name: str = typer.Argument(..., help="Workspace name")) -> None:
+    """View or change workspace permission level."""
+    from loclm.workspace.manager import WorkspaceManager
+    from loclm.workspace.permissions import WorkspacePermission
+
+    wm = WorkspaceManager()
+    entry = wm.registry.get_workspace(name)
+
+    if not entry:
+        print_error(f"Workspace '{name}' not found.")
+        return
+
+    console.print(f"\n[bold white]{entry.name}[/]")
+    console.print(f"Current permission: [bold green]{entry.permission.value.upper()}[/]\n")
+
+    console.print("Change permission to:")
+    console.print("  [1] READ (Read only)")
+    console.print("  [2] WRITE (Read + Write)")
+    console.print("  [3] FULL (Full workspace)")
+    console.print("  [4] REMOVE ACCESS")
+
+    choice = typer.prompt("Select option", type=int, default=2)
+
+    if choice == 4:
+        wm.remove_workspace(entry.name)
+        print_success(f"Access permission removed for '{entry.name}'.")
+    else:
+        perm_map = {1: WorkspacePermission.READ, 2: WorkspacePermission.WRITE, 3: WorkspacePermission.FULL}
+        new_perm = perm_map.get(choice, WorkspacePermission.WRITE)
+        wm.set_permission(entry.name, new_perm)
+        print_success(f"Updated permission for '{entry.name}' → {new_perm.value.upper()}.")
+
+
+@project_app.command(name="create")
+def project_create(
+    template: str = typer.Option(None, "--template", "-t", help="Template name (fastapi, react, vite, python_cli, ml)"),
+    name: str = typer.Option(None, "--name", "-n", help="Project name"),
+    workspace: str = typer.Option(None, "--workspace", "-w", help="Target approved workspace name"),
+) -> None:
+    """Create a new project inside an approved workspace."""
+    from loclm.projects.manager import ProjectManager
+    from loclm.workspace.manager import WorkspaceManager
+
+    wm = WorkspaceManager()
+    pm = ProjectManager(wm)
+
+    if not name:
+        name = typer.prompt("Enter project name")
+
+    if not workspace:
+        active = wm.context.active_workspace
+        if active:
+            workspace = active.name
+        else:
+            ws_list = wm.list_workspaces()
+            if not ws_list:
+                print_error("No approved workspaces found. Please run 'loclm workspace add' first.")
+                return
+            workspace = ws_list[0].name
+
+    prompt = f"Create a {template or 'general'} project called {name}"
+    try:
+        plan = pm.create_project_plan(prompt, workspace)
+        console.print(f"\n{plan.format_plan_report()}\n")
+
+        confirm = typer.confirm("Create this project?", default=True)
+        if confirm:
+            success, created_files, report = pm.execute_project_creation(plan)
+            print_success(f"\nProject '{name}' created successfully in '{plan.project_dir}':")
+            for f in created_files:
+                console.print(f"  ✓ {f}")
+            console.print(f"\n[bold green]{len(created_files)} items created & verified.[/]")
+        else:
+            print_info("Project creation cancelled.")
+    except Exception as exc:
+        print_error(str(exc))
+
+
+@project_app.command(name="inspect")
+def project_inspect(path: str = typer.Argument(..., help="Project directory path or workspace name")) -> None:
+    """Inspect an existing project directory inside an approved workspace."""
+    from loclm.projects.manager import ProjectManager
+
+    pm = ProjectManager()
+    try:
+        profile = pm.inspect_project(path)
+        report = pm.inspector.format_inspection_report(profile)
+        console.print(f"\n[bold bright_blue]{report}[/]\n")
+    except Exception as exc:
+        print_error(str(exc))
+
+
+@project_app.command(name="tree")
+def project_tree(
+    path: str = typer.Argument(..., help="Workspace or project directory path"),
+    depth: int = typer.Option(3, "--depth", "-d", help="Max directory tree depth"),
+) -> None:
+    """Display directory tree for a project inside an approved workspace."""
+    from loclm.projects.manager import ProjectManager
+
+    pm = ProjectManager()
+    try:
+        tree_str = pm.get_project_tree(path, max_depth=depth)
+        console.print(f"\n[bold cyan]{tree_str}[/]\n")
+    except Exception as exc:
+        print_error(str(exc))

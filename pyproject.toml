@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "loclm"
-version = "8.0.0"
+version = "9.0.0"
 description = "LocLM — Universal Fully Offline Local AI Assistant"
 readme = "README.md"
 license = "MIT"

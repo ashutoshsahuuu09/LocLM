@@ -1,7 +1,7 @@
-"""LocLM Security Package (V8 Architecture).
+"""LocLM Security Package (V9 Architecture).
 
 Provides offline network enforcement, security policy guards,
-pre-execution command/path auditing, and immutable security logs.
+path traversal isolation, workspace permission enforcement, and zero-trust operation auditing.
 """
 
 from loclm.security.guard import (
@@ -18,6 +18,9 @@ from loclm.security.network import (
     set_offline_mode,
     validate_url,
 )
+from loclm.security.operation_guard import OperationGuard
+from loclm.security.path_guard import PathGuard
+from loclm.security.permission_guard import PermissionGuard
 
 __all__ = [
     "AuditRecord",
@@ -30,4 +33,7 @@ __all__ = [
     "is_offline_mode",
     "set_offline_mode",
     "validate_url",
+    "PathGuard",
+    "PermissionGuard",
+    "OperationGuard",
 ]

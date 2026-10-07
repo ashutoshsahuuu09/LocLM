@@ -1,10 +1,10 @@
-"""LocLM Agents Framework (V8 Architecture).
+"""LocLM Agents Framework (V9 Architecture).
 
 Provides base agent abstractions, multi-agent router, task planner,
-V5/V7/V8 orchestrators, memory integration, self-correction,
+V5/V7/V8/V9 orchestrators, memory integration, self-correction,
 specialised agents (Coding, Terminal, Knowledge, General, Project, Refactor),
 EvaluatorAgent, Multi-Agent Swarm Orchestrator, Consensus Manager,
-and the V8 Autonomous Workflow DAG Orchestrator with Policy Security Guard.
+V8 Autonomous Workflow DAG Orchestrator, and V9 Universal Multi-Directory Workspace Orchestrator.
 """
 
 from loclm.agents.base import AgentContext, AgentResponse, AgentRole, BaseAgent
@@ -24,6 +24,7 @@ from loclm.agents.terminal_agent import TerminalAgent
 from loclm.agents.v5_orchestrator import SelfCorrectionTrace, V5AgentResponse, V5Orchestrator
 from loclm.agents.v7_orchestrator import V7AgentResponse, V7Orchestrator
 from loclm.agents.v8_orchestrator import V8AgentResponse, V8Orchestrator
+from loclm.agents.v9_orchestrator import V9AgentResponse, V9Orchestrator
 
 __all__ = [
     "AgentContext",
@@ -60,4 +61,7 @@ __all__ = [
     "SwarmResult",
     "SwarmRole",
     "SwarmMessage",
+    # V9
+    "V9Orchestrator",
+    "V9AgentResponse",
 ]
