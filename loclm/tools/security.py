@@ -61,10 +61,14 @@ class SecurityGuard:
         except Exception as e:
             return False, f"Invalid path specification: {e}"
 
-        # Check path against system root dangers
+        # Check string representation for Windows system paths across platforms
+        str_path = str(target_path).replace("\\", "/").lower()
+        win_system_prefixes = ("c:/windows", "c:/system32")
+        if any(str_path.startswith(prefix) for prefix in win_system_prefixes):
+            return False, f"Access to system path '{target_path}' is strictly blocked for security."
+
+        # Check path against POSIX / OS system root dangers
         system_roots = [
-            Path("C:\\Windows").resolve(),
-            Path("C:\\System32").resolve(),
             Path("/etc").resolve(),
             Path("/usr").resolve(),
             Path("/var").resolve(),
